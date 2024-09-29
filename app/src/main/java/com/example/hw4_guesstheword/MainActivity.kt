@@ -2,6 +2,7 @@ package com.example.hw4_guesstheword
 import android.content.ClipData.Item
 import android.content.res.Configuration
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -50,19 +51,19 @@ class Word(
 val wordList = listOf(
     Word("Apple", "A fruit that keeps the doctor away."),
     Word("Piano", "A musical instrument with black and white keys."),
-    Word("Elephant", "The largest land animal with a trunk."),
-    Word("Paris", "The city of love and home to the Eiffel Tower."),
-    Word("Library", "A place where you can borrow books."),
-    Word("Rainbow", "Appears in the sky after rain and has seven colors."),
-    Word("Oxygen", "An essential gas we breathe in."),
-    Word("Shark", "A large predator found in the ocean."),
-    Word("Mountain", "A large natural elevation of the Earth's surface."),
-    Word("Chocolate", "A sweet treat made from cocoa."),
-    Word("Guitar", "A string instrument often used in rock music."),
-    Word("Sunflower", "A tall plant with a large, bright yellow flower."),
-    Word("Penguin", "A flightless bird that lives in cold, icy environments."),
-    Word("Laptop", "A portable computer that can be used on your lap."),
-    Word("Football", "A sport played with a round ball and two goals.")
+//    Word("Elephant", "The largest land animal with a trunk."),
+//    Word("Paris", "The city of love and home to the Eiffel Tower."),
+//    Word("Library", "A place where you can borrow books."),
+//    Word("Rainbow", "Appears in the sky after rain and has seven colors."),
+//    Word("Oxygen", "An essential gas we breathe in."),
+//    Word("Shark", "A large predator found in the ocean."),
+//    Word("Mountain", "A large natural elevation of the Earth's surface."),
+//    Word("Chocolate", "A sweet treat made from cocoa."),
+//    Word("Guitar", "A string instrument often used in rock music."),
+//    Word("Sunflower", "A tall plant with a large, bright yellow flower."),
+//    Word("Penguin", "A flightless bird that lives in cold, icy environments."),
+//    Word("Laptop", "A portable computer that can be used on your lap."),
+//    Word("Football", "A sport played with a round ball and two goals.")
 )
 
 
@@ -94,7 +95,8 @@ fun LetterGrid(buttonStates: MutableMap<Char, Boolean>, onClick: (Char) -> Unit)
         items(('a'..'z').toList()) { item ->
             CharButton(
                 t = item,
-                onClick = { onClick(it) },
+                onClick = { onClick(it)
+                          Log.d("LetterGrid Print",item.toString())},
                 buttonStates = buttonStates
             )
         }
@@ -118,14 +120,18 @@ fun HangManDisplay(phase: Int) {
         R.drawable.phase5,
         R.drawable.phase6,
     )
+    var currentPhase = phase
+    if (phase > 6){
+        currentPhase = 6
+    }
     Box(
         modifier = Modifier
             .fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
         Image(
-            painter = painterResource(id = imageList[phase]),
-            contentDescription = "Image $phase",
+            painter = painterResource(id = imageList[currentPhase]),
+            contentDescription = "Image $currentPhase",
             modifier = Modifier
                 .size(100.dp)
         )
@@ -181,8 +187,10 @@ fun Hint(word: Word, phase: Int, onHintUsed: () -> Unit) {
         Button(onClick = {
             if (phase < 4) {
                 hintCounter++
-                onHintUsed()
-                when (hintCounter) {
+                if (hintCounter > 1){
+                    onHintUsed()
+                }
+                when (hintCounter) { // TODO: Charles. Implement the second and third cases for "Hint"
                     1 -> Toast.makeText(context, "Hint: ${word.hint}", Toast.LENGTH_SHORT).show()
                     2 -> Toast.makeText(context, "Hint: Half keyboard disable", Toast.LENGTH_SHORT).show()
                     3 -> {
@@ -206,8 +214,6 @@ fun Hint(word: Word, phase: Int, onHintUsed: () -> Unit) {
 
 
 
-
-
 @Composable
 fun Home(modifier: Modifier = Modifier) {
     val configuration = LocalConfiguration.current
@@ -215,7 +221,7 @@ fun Home(modifier: Modifier = Modifier) {
     var word by remember { mutableStateOf(wordList.random()) }
     var buttonStates by remember { mutableStateOf(('a'..'z').associateWith { true }.toMutableMap()) }
     var phase by remember { mutableStateOf(0) }
-    val wordvis = remember { mutableStateMapOf<Char, Boolean>() }
+    var wordvis = remember { mutableStateMapOf<Char, Boolean>() }
     val context = LocalContext.current
 
     for (e in word.word) {
@@ -260,6 +266,7 @@ fun Home(modifier: Modifier = Modifier) {
                     } else {
                         phase++
                     }
+                    Log.d("Home Print",wordvis.toString())
                 })
 
                 Spacer(modifier = Modifier.height(20.dp))
