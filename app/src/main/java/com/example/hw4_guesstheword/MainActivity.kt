@@ -1,6 +1,8 @@
 package com.example.hw4_guesstheword
+import android.content.ClipData.Item
 import android.content.res.Configuration
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -12,10 +14,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.* // for layout
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridScope
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.* // for Material design components
 import androidx.compose.runtime.* // for managing the composable state
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.sp
 import com.example.hw4_guesstheword.ui.theme.Hw4_guessTheWordTheme
 
 class MainActivity : ComponentActivity() {
@@ -58,39 +66,43 @@ val wordList = listOf(
 )
 
 
+
+
+
 // The layout to store the buttons
 @Composable
-fun CharButton(t: String, taggleToFalse: Boolean = false, onclick: () -> Unit){
-    var enabled by remember { mutableStateOf(true) }
-    if (taggleToFalse) {
-        enabled = false
-    }
+fun CharButton(t: Char, onClick: (Char) -> Unit, buttonStates: MutableMap<Char, Boolean>) {
     Button(
         onClick = {
-            onclick()
-            enabled = false
+            onClick(t)
+            buttonStates[t] = false
         },
-        enabled = enabled
-    ){
-        Text(t)
+        enabled = buttonStates[t] == true,
+        modifier = Modifier
+            .padding(2.dp)
+            .width(40.dp)
+            .height(40.dp)
+    ) {
+        Text(t.toString(), fontSize = 16.sp)
     }
 }
 
 
-// 1/3 This is the Button composable that contains all Buttons to be pressed.
 @Composable
-fun AllButtons(mapping: HashMap<String, Boolean>, onclick: () -> Unit){
-    Column {
-        LazyRow {
-            items(listOf("a".."e")) { letter ->
-                mapping[letter.toString()]?.let {
-                    CharButton(t= letter.toString(),
-                    taggleToFalse = it,
-                    onclick = onclick) }
-            }
+fun LetterGrid(buttonStates: MutableMap<Char, Boolean>, onClick: (Char) -> Unit) {
+    LazyVerticalGrid(columns = GridCells.Fixed(5)) {
+        items(('a'..'z').toList()) { item ->
+            CharButton(
+                t = item,
+                onClick = { onClick(it) },
+                buttonStates = buttonStates
+            )
         }
     }
 }
+
+
+
 
 
 // The class to store the words
@@ -121,29 +133,73 @@ fun HangManDisplay(phase: Int) {
 }
 
 
+//@Composable
+//fun Hint(word: Word){
+//    var hintCounter by remember { mutableStateOf(0)}
+//    if (hintCounter == 0){
+//        // do not display anything
+//    }else if(hintCounter == 1){
+//        // display only the hint message
+//        // find in word.hint, where word is the input with type Word
+//
+//    }else if(hintCounter == 2){
+//        // eliminate half of the unused buttons
+//        // phase + 1
+//    }else {
+//        // display all chars in the word if they are one of [a,e,i,o,u]
+//        // phase + 1
+//        val vowels = listOf('a','e','i','o','u')
+//
+//    }
+//    // if phase == 6 end the game
+//
+//    Column{
+//
+//    }
+//
+//}
 @Composable
-fun Hint(word: Word){
-    var hintCounter by remember { mutableStateOf(0)}
-    if (hintCounter == 0){
-        // do not display anything
-    }else if(hintCounter == 1){
-        // display only the hint message
-        // find in word.hint, where word is the input with type Word
-
-    }else if(hintCounter == 2){
-        // eliminate half of the unused buttons
-        // phase + 1
-    }else {
-        // display all chars in the word if they are one of [a,e,i,o,u]
-        // phase + 1
-        val vowels = listOf('a','e','i','o','u')
-
+fun WordDisplay(word: Word, wordvis: MutableMap<Char, Boolean>) {
+    Row(horizontalArrangement = Arrangement.Center) {
+        for (char in word.word) {
+            Text(
+                text = if (wordvis[char] == true) char.toString() else "_",
+                fontSize = 30.sp,
+                modifier = Modifier.padding(8.dp)
+            )
+        }
     }
-    // if phase == 6 end the game
+}
 
-    Column{
 
-    }
+@Composable
+fun Hint(word: Word, phase: Int, onHintUsed: () -> Unit) {
+    var hintCounter by remember { mutableStateOf(0) }
+    val context = LocalContext.current
+
+
+        Button(onClick = {
+            if (phase < 4) {
+                hintCounter++
+                onHintUsed()
+                when (hintCounter) {
+                    1 -> Toast.makeText(context, "Hint: ${word.hint}", Toast.LENGTH_SHORT).show()
+                    2 -> Toast.makeText(context, "Hint: Half keyboard disable", Toast.LENGTH_SHORT).show()
+                    3 -> {
+                        val vowels = listOf('a', 'e', 'i', 'o', 'u')
+                        Toast.makeText(context, "Hint: Volwel reveald", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } else {
+                Toast.makeText(context, "Hint not available", Toast.LENGTH_SHORT).show()
+            }
+        }) {
+            Text(text = "Hint")
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+
 
 }
 
@@ -151,60 +207,103 @@ fun Hint(word: Word){
 
 
 
+
 @Composable
 fun Home(modifier: Modifier = Modifier) {
-    // init configuration for Landscape / Portrait mode
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-    // TODO need to save the current state, not rebuilding everything
-    var word by remember { mutableStateOf(wordList[0])}
-    var buttonToChar by remember { mutableStateOf(hashMapOf<String, Boolean>()) }
+    var word by remember { mutableStateOf(wordList.random()) }
+    var buttonStates by remember { mutableStateOf(('a'..'z').associateWith { true }.toMutableMap()) }
+    var phase by remember { mutableStateOf(0) }
+    val wordvis = remember { mutableStateMapOf<Char, Boolean>() }
+    val context = LocalContext.current
 
-    var phase by remember { mutableStateOf(0) } //Take track of how many chances the user has
-
-    fun nextPhase(){
-        if (phase < 6){
-            phase ++
-        }
+    for (e in word.word) {
+        wordvis[e] = false
     }
 
-
-    for (char in 'a'..'z'){
-        val currentChar = char.toString()
-        if (word.contains(char)){
-            buttonToChar[currentChar] = true
-        }
+    fun onHintUsed() {
+        if (phase < 6) phase++
     }
 
-    if (isLandscape){
+    fun startNewGame() {
+        word = wordList.random()
+        buttonStates.keys.forEach { char ->
+            buttonStates[char] = true
+        }
+        wordvis.clear()
+        word.word.forEach { wordvis[it] = false }
+        phase = 0
+    }
+
+    val isGameWon = wordvis.values.all { it }
+    val isGameOver = phase >= 6
+
+    if (isGameOver) {
+        Toast.makeText(context, "You lost! The word was ${word.word}.", Toast.LENGTH_LONG).show()
+    } else if (isGameWon) {
+        Toast.makeText(context, "Congratulations, You won!", Toast.LENGTH_LONG).show()
+    }
+
+    if (isLandscape) {
         Row(modifier = Modifier.fillMaxSize()) {
-            // buttons and hint on the left
-            Column {
-                AllButtons(buttonToChar,{nextPhase()}) {target ->
-                    buttonToChar[target] = false
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                LetterGrid(buttonStates = buttonStates, onClick = { char ->
+                    if (word.contains(char)) {
+                        word.word.forEach { if (it.equals(char, ignoreCase = true)) wordvis[it] = true }
+                    } else {
+                        phase++
+                    }
+                })
+
+                Spacer(modifier = Modifier.height(20.dp))
+                Row {
+                    Hint(word = word, phase = phase, onHintUsed = { onHintUsed() })
+                    NewGameButton(onNewGame = { startNewGame() })
                 }
-                Spacer(Modifier.padding(30.dp))
-                Hint(word)
             }
-
-            // the handing man on the right
-            HangManDisplay(phase = phase)
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+                contentAlignment = Alignment.Center
+            ) {
+                HangManDisplay(phase = phase)
+            }
         }
-    } else{
-        // Portrait: Handing man on the top,
-        // button pad on the bottom
-        // no hint displayed
+    } else {
         Column {
-            HangManDisplay(phase = phase)
-            Spacer(Modifier.padding(30.dp))
-            AllButtons(buttonToChar, onclick = { nextPhase() }){
-                target ->
-                buttonToChar[target] = false
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+                contentAlignment = Alignment.Center
+            ) {
+                HangManDisplay(phase = phase)
             }
+            Spacer(Modifier.padding(30.dp))
+            LetterGrid(buttonStates = buttonStates, onClick = { char ->
+                if (word.contains(char)) {
+                    word.word.forEach { if (it.equals(char, ignoreCase = true)) wordvis[it] = true }
+                } else {
+                    phase++
+                }
+            })
+            NewGameButton(onNewGame = { startNewGame() })
         }
-
     }
+}
 
+@Composable
+fun NewGameButton(onNewGame: () -> Unit) {
+    Button(onClick = { onNewGame() }) {
+        Text(text = "New Game")
+    }
 }
 
 
