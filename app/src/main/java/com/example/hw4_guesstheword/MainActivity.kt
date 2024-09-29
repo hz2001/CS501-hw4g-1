@@ -253,6 +253,7 @@ fun Home(modifier: Modifier = Modifier) {
                     .padding(16.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
+                WordDisplay(word = word, wordvis = wordvis)
                 LetterGrid(buttonStates = buttonStates, onClick = { char ->
                     if (word.contains(char)) {
                         word.word.forEach { if (it.equals(char, ignoreCase = true)) wordvis[it] = true }
@@ -287,6 +288,8 @@ fun Home(modifier: Modifier = Modifier) {
                 HangManDisplay(phase = phase)
             }
             Spacer(Modifier.padding(30.dp))
+            WordDisplay(word = word, wordvis = wordvis)
+            Spacer(Modifier.padding(10.dp))
             LetterGrid(buttonStates = buttonStates, onClick = { char ->
                 if (word.contains(char)) {
                     word.word.forEach { if (it.equals(char, ignoreCase = true)) wordvis[it] = true }
