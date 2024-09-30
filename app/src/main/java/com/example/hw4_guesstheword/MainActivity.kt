@@ -180,17 +180,18 @@ fun WordDisplay(word: Word, wordvis: MutableMap<Char, Boolean>) {
 
 @Composable
 fun Hint(word: Word, phase: Int, onHintUsed: () -> Unit) {
-    var hintCounter by remember { mutableStateOf(0) }
+
     val context = LocalContext.current
 
 
         Button(onClick = {
-            if (phase < 4) {
-                hintCounter++
-                if (hintCounter > 1){
+
+          if (phase>=0&&phase < 3) {
+
+
                     onHintUsed()
-                }
-                when (hintCounter) { // TODO: Charles. Implement the second and third cases for "Hint"
+
+                when (phase+1) { // TODO: Charles. Implement the second and third cases for "Hint"
                     1 -> Toast.makeText(context, "Hint: ${word.hint}", Toast.LENGTH_SHORT).show()
                     2 -> Toast.makeText(context, "Hint: Half keyboard disable", Toast.LENGTH_SHORT).show()
                     3 -> {
