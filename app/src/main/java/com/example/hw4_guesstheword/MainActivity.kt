@@ -153,17 +153,22 @@ fun HangManDisplay(phase: Int) {
 
 
 @Composable
-fun WordDisplay(word: Word, wordvis: MutableMap<Char, Boolean>) {
+fun WordDisplay(word: Word, wordvis: Map<Char, Boolean>) {
     Row(horizontalArrangement = Arrangement.Center) {
         for (char in word.word) {
             Text(
-                text = if (wordvis[char] == true) char.toString() else "_",
+                text = if (wordvis[char.toLowerCase()] == true || wordvis[char.toUpperCase()] == true) {
+                    char.toString()
+                } else {
+                    "_"
+                },
                 fontSize = 30.sp,
                 modifier = Modifier.padding(8.dp)
             )
         }
     }
 }
+
 
 
 @SuppressLint("SuspiciousIndentation")
@@ -203,7 +208,7 @@ fun Home(modifier: Modifier = Modifier) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     var word by rememberSaveable   { mutableStateOf(wordList.random()) }
-    var cur by rememberSaveable { mutableStateOf(null) }
+    var validate by rememberSaveable { mutableStateOf(0) }
 
 
     val mapSaver = Saver<SnapshotStateMap<Char, Boolean>, List<Pair<Char, Boolean>>>(
@@ -251,12 +256,12 @@ fun Home(modifier: Modifier = Modifier) {
         wordvis = mutableStateMapOf<Char, Boolean>().apply {
             word.word.forEach { this[it] = false }
         }
-
+        validate=0
 
         phase = 0
     }
 
-    val isGameWon = wordvis.values.all { it }
+    val isGameWon = validate==word.word.length
     val isGameOver = phase >= 6
 
     if (isGameWon || isGameOver) {
@@ -287,7 +292,7 @@ fun Home(modifier: Modifier = Modifier) {
                     } else {
                         phase++
                     }
-                    Log.d("Home Print",wordvis.toString())
+
                 })
 
                 Spacer(modifier = Modifier.height(20.dp))
@@ -321,11 +326,23 @@ fun Home(modifier: Modifier = Modifier) {
             LetterGrid(buttonStates = buttonStates, onClick = { char ->
 
                 if (word.contains(char)) {
-                    wordvis[char] = true }
+                    wordvis[char] = true
+                var count=0
+                    for (c in word.word){
+                        if(c==char){
+                            count++
+                        }
+                    }
+                    validate+=count
+
+                }
                  else {
                     phase++
                 }
-            })
+
+            }
+
+            )
             NewGameButton(onNewGame = { startNewGame() })
         }
     }
