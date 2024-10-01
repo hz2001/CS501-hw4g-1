@@ -154,8 +154,6 @@ fun HangManDisplay(phase: Int) {
     }
 }
 
-
-
 @Composable
 fun WordDisplay(word: Word, wordvis: Map<Char, Boolean>) {
     Row(horizontalArrangement = Arrangement.Center) {
@@ -329,7 +327,7 @@ fun Home(modifier: Modifier = Modifier) {
                     letterGridCB(char)
                 })
 
-                Spacer(modifier = Modifier.height(20.dp))
+                //Spacer(modifier = Modifier.height(20.dp))
                 Row {
                     Hint(word = word, hintCounter = hintCounter, onHintUsed = { onHintUsed() },buttonStates,wordvis, thirdHint= { thirdHint() })
                     NewGameButton(onNewGame = { startNewGame() })
