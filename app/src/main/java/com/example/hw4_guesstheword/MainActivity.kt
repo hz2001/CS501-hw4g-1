@@ -58,6 +58,10 @@ class Word(
     fun contains(c: Char): Boolean {
         return word.contains(c,ignoreCase = true)
     }
+    fun distinct(): Int{
+        val distinctChars = word.toSet()
+        return distinctChars.size
+    }
 }
 
 val wordList = listOf(
@@ -145,7 +149,7 @@ fun HangManDisplay(phase: Int) {
             painter = painterResource(id = imageList[currentPhase]),
             contentDescription = "Image $currentPhase",
             modifier = Modifier
-                .size(100.dp)
+                .size(200.dp)
         )
     }
 }
@@ -173,13 +177,13 @@ fun WordDisplay(word: Word, wordvis: Map<Char, Boolean>) {
 
 @SuppressLint("SuspiciousIndentation")
 @Composable         //TODO Charles Implementation
-fun Hint(word: Word, phase: Int, onHintUsed: () -> Unit, buttonStates: MutableMap<Char, Boolean>
-,wordvis: MutableMap<Char, Boolean>) {
+fun Hint(word: Word, hintCounter: Int, onHintUsed: () -> Unit, buttonStates: MutableMap<Char, Boolean>
+,wordvis: MutableMap<Char, Boolean>, thirdHint: () -> Unit) {
     val context = LocalContext.current
     Button(onClick = {
-        if (phase in 0..2) {
-            onHintUsed()
-            when (phase + 1) {
+        onHintUsed()
+        if (hintCounter in 0..2) {
+            when (hintCounter + 1) {
                 1 -> Toast.makeText(context, "Hint: ${word.hint}", Toast.LENGTH_SHORT).show()
                 2 -> {//TODO Charles Implementation
                     val unusedLetters = buttonStates.filter { !word.word.toLowerCase().contains(it.key) }
@@ -193,18 +197,16 @@ fun Hint(word: Word, phase: Int, onHintUsed: () -> Unit, buttonStates: MutableMa
                     Toast.makeText(context, "Hint: Half of the wrong letters are disabled.", Toast.LENGTH_SHORT).show()
                 }
                 3 -> {//TODO Charles Implementation
-                    val vowels = listOf('a', 'e', 'i', 'o', 'u')
-                    vowels.forEach { if(word.word.toLowerCase().contains(it)){
-                        wordvis[it]=true
-                        buttonStates[it]=false
-                        } }
+                    thirdHint()
                     Toast.makeText(context, "Hint: Vowels revealed.", Toast.LENGTH_SHORT).show()
                 }
             }
         } else {
             Toast.makeText(context, "Hint not available", Toast.LENGTH_SHORT).show()
+
         }
-    }) {
+    },
+        enabled = hintCounter < 3) {
         Text("Hint")
     }
 }
@@ -248,11 +250,13 @@ fun Home(modifier: Modifier = Modifier) {
 
     val context = LocalContext.current
     var phase by rememberSaveable  { mutableStateOf(0) }
+    var hintCounter by rememberSaveable  { mutableStateOf(0) }
 
 
 
     fun onHintUsed() {
-        if (phase < 6) phase++
+        hintCounter ++
+        if (phase < 6 && hintCounter>1) phase++
     }
 
     fun startNewGame() {
@@ -269,21 +273,47 @@ fun Home(modifier: Modifier = Modifier) {
         validate=0
 
         phase = 0
+        hintCounter = 0
     }
 
-    val isGameWon = validate==word.word.length
+    fun letterGridCB(char:Char){
+        if (word.contains(char)) {
+            wordvis[char] = true
+            validate ++
+        } else {
+            phase++
+        }
+        Log.d("validate", validate.toString())
+    }
+
+    fun thirdHint(){
+        val vowels = listOf('a', 'e', 'i', 'o', 'u')
+        vowels.forEach { if(word.word.contains(it,ignoreCase=true)){
+            wordvis[it]=true
+            buttonStates[it]=false
+            validate ++
+        } }
+    }
+
+    val isGameWon = validate==word.distinct()
+    Log.d("validate", "GameWon"+isGameWon.toString())
     val isGameOver = phase >= 6
 
     if (isGameWon || isGameOver) {
         buttonStates.keys.forEach { char -> buttonStates[char] = false }
+        hintCounter = 4
     }
 
     LaunchedEffect(isGameOver, isGameWon) {
         if (isGameOver) {
             Toast.makeText(context, "You lost! The word was ${word.word}.", Toast.LENGTH_LONG).show()
+            Log.d("validate", "isGameOver")
         } else if (isGameWon) {
             Toast.makeText(context, "Congratulations, You won!", Toast.LENGTH_LONG).show()
+            Log.d("validate", "isGameWon")
+
         }
+        Log.d("validate", "LaunchedEffect")
     }
 
     if (isLandscape) {
@@ -296,18 +326,12 @@ fun Home(modifier: Modifier = Modifier) {
             ) {
                 WordDisplay(word = word, wordvis = wordvis)
                 LetterGrid(buttonStates = buttonStates, onClick = { char ->
-
-                    if (word.contains(char)) {
-                         wordvis[char] = true
-                    } else {
-                        phase++
-                    }
-
+                    letterGridCB(char)
                 })
 
                 Spacer(modifier = Modifier.height(20.dp))
                 Row {
-                    Hint(word = word, phase = phase, onHintUsed = { onHintUsed() },buttonStates,wordvis)
+                    Hint(word = word, hintCounter = hintCounter, onHintUsed = { onHintUsed() },buttonStates,wordvis, thirdHint= { thirdHint() })
                     NewGameButton(onNewGame = { startNewGame() })
                 }
             }
@@ -334,22 +358,7 @@ fun Home(modifier: Modifier = Modifier) {
             WordDisplay(word = word, wordvis = wordvis)
             Spacer(Modifier.padding(10.dp))
             LetterGrid(buttonStates = buttonStates, onClick = { char ->
-
-                if (word.contains(char)) {
-                    wordvis[char] = true
-                var count=0
-                    for (c in word.word){
-                        if(c==char){
-                            count++
-                        }
-                    }
-                    validate+=count
-
-                }
-                 else {
-                    phase++
-                }
-
+                letterGridCB(char)
             }
 
             )
